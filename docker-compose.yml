@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      LEAGUES_CACHE_TTL_MS: 3600000
+      QUERY_CACHE_TTL_MS: 300000
+      PREVIEW_LIMIT: 200
+      EXPORT_LIMIT: 10000

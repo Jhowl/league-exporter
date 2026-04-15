@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dota 2 League Exporter</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">OpenDota Explorer SQL</p>
+          <h1>Dota 2 league exports built for analysis, not screenshots.</h1>
+          <p class="lede">
+            Search professional and premium leagues, preview league matches, and export CSV
+            files with tournament, teams, kills, map number, winner, date, and patch.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <p class="panel-label">Rules</p>
+          <ul class="rule-list">
+            <li>League selector is loaded from Explorer SQL, including leagues that started before 2023.</li>
+            <li>Match export dates are limited to 2023 and newer.</li>
+            <li>The app is tunnel-ready and listens on a configurable port.</li>
+          </ul>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="filters card">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Filters</p>
+              <h2>Build an export</h2>
+            </div>
+            <span class="status-pill" id="connection-status">Loading configuration…</span>
+          </div>
+
+          <form id="filters-form" class="filters-form">
+            <div class="field-grid">
+              <label class="field">
+                <span>Start date</span>
+                <input id="start-date" name="startDate" type="date" min="2023-01-01" required />
+              </label>
+              <label class="field">
+                <span>End date</span>
+                <input id="end-date" name="endDate" type="date" min="2023-01-01" required />
+              </label>
+            </div>
+
+            <fieldset class="tier-switch">
+              <legend>Tier</legend>
+              <label class="tier-option">
+                <input type="radio" name="tier" value="professional" checked />
+                <span>Professional</span>
+              </label>
+              <label class="tier-option">
+                <input type="radio" name="tier" value="premium" />
+                <span>Premium</span>
+              </label>
+            </fieldset>
+
+            <label class="field">
+              <span>League search</span>
+              <input
+                id="league-search"
+                type="search"
+                placeholder="Search for a league name"
+                autocomplete="off"
+              />
+            </label>
+
+            <div class="selection-meta">
+              <span id="league-count">0 leagues loaded</span>
+              <span id="selection-count">0 selected</span>
+            </div>
+
+            <div class="selected-leagues" id="selected-leagues">
+              <p class="hint">No leagues selected yet.</p>
+            </div>
+
+            <div class="league-list" id="league-list" aria-live="polite"></div>
+
+            <div class="action-row">
+              <button type="submit" id="preview-button" class="action action-primary">
+                Preview matches
+              </button>
+              <button type="button" id="export-button" class="action action-secondary">
+                Download CSV
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="results card">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Preview</p>
+              <h2>Matches</h2>
+            </div>
+            <div class="results-meta" id="results-meta">No preview loaded.</div>
+          </div>
+
+          <div class="feedback" id="feedback"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tournament</th>
+                  <th>Radiant</th>
+                  <th>Dire</th>
+                  <th>Kills</th>
+                  <th>Map</th>
+                  <th>Series</th>
+                  <th>Winner</th>
+                  <th>Date</th>
+                  <th>Patch</th>
+                </tr>
+              </thead>
+              <tbody id="results-body">
+                <tr>
+                  <td colspan="9" class="empty-state">Run a preview to inspect matches before export.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
