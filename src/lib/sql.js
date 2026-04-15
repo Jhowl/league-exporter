@@ -22,7 +22,63 @@ function leagueIdsSql(leagueIds) {
   return leagueIds.join(", ");
 }
 
-export function buildLeaguesSql(tier) {
+function selectedLeaguesClause(filters) {
+  if (filters.allLeagues || filters.leagueIds.length === 0) {
+    return "";
+  }
+
+  return `AND m.leagueid IN (${leagueIdsSql(filters.leagueIds)})`;
+}
+
+function excludedLeaguesClause(filters) {
+  if (filters.excludedLeagueIds.length === 0) {
+    return "";
+  }
+
+  return `AND m.leagueid NOT IN (${leagueIdsSql(filters.excludedLeagueIds)})`;
+}
+
+function filteredMatchesCte(filters, includeTotalRows = false) {
+  return `
+    WITH filtered_matches AS (
+      SELECT
+        m.match_id,
+        m.leagueid AS league_id,
+        l.name AS tournament,
+        COALESCE(NULLIF(rt.name, ''), CONCAT('Radiant #', COALESCE(m.radiant_team_id::text, 'unknown'))) AS radiant_team,
+        COALESCE(NULLIF(dt.name, ''), CONCAT('Dire #', COALESCE(m.dire_team_id::text, 'unknown'))) AS dire_team,
+        COALESCE(m.radiant_score, 0) AS kill_team_1,
+        COALESCE(m.dire_score, 0) AS kill_team_2,
+        CASE
+          WHEN COALESCE(m.series_id, 0) = 0 THEN 1
+          ELSE ROW_NUMBER() OVER (PARTITION BY m.series_id ORDER BY m.start_time ASC, m.match_id ASC)
+        END AS map_number,
+        COALESCE(NULLIF(m.series_id, 0), m.match_id) AS series_id,
+        CASE
+          WHEN m.radiant_win IS TRUE THEN COALESCE(NULLIF(rt.name, ''), 'Radiant')
+          WHEN m.radiant_win IS FALSE THEN COALESCE(NULLIF(dt.name, ''), 'Dire')
+          ELSE 'Unknown'
+        END AS winner,
+        m.start_time,
+        mp.patch
+        ${includeTotalRows ? ", COUNT(*) OVER () AS total_rows" : ""}
+      FROM matches m
+      JOIN leagues l USING (leagueid)
+      JOIN match_patch mp USING (match_id)
+      LEFT JOIN teams rt ON rt.team_id = m.radiant_team_id
+      LEFT JOIN teams dt ON dt.team_id = m.dire_team_id
+      WHERE TRUE
+        AND l.tier = ${tierSql(filters.tier)}
+        AND m.start_time >= extract(epoch from ${sqlDateTimestamp(MIN_EXPORT_DATE)})
+        AND m.start_time >= extract(epoch from ${sqlDateTimestamp(filters.startDate)})
+        AND m.start_time < extract(epoch from ${sqlDateTimestamp(addOneDay(filters.endDate))})
+        ${selectedLeaguesClause(filters)}
+        ${excludedLeaguesClause(filters)}
+    )
+  `;
+}
+
+export function buildLeaguesSql(filters) {
   return `
     SELECT
       m.leagueid,
@@ -41,7 +97,10 @@ export function buildLeaguesSql(tier) {
     WHERE TRUE
       AND m.leagueid IS NOT NULL
       AND COALESCE(l.name, '') <> ''
-      AND l.tier = ${tierSql(tier)}
+      AND l.tier = ${tierSql(filters.tier)}
+      AND m.start_time >= extract(epoch from ${sqlDateTimestamp(MIN_EXPORT_DATE)})
+      AND m.start_time >= extract(epoch from ${sqlDateTimestamp(filters.startDate)})
+      AND m.start_time < extract(epoch from ${sqlDateTimestamp(addOneDay(filters.endDate))})
     GROUP BY m.leagueid, l.name, l.tier
     ORDER BY last_match_time DESC NULLS LAST, l.name ASC
     LIMIT 1500
@@ -49,41 +108,10 @@ export function buildLeaguesSql(tier) {
 }
 
 export function buildMatchesSql(filters, limit) {
-  const endExclusive = addOneDay(filters.endDate);
-
   return `
-    WITH filtered_matches AS (
-      SELECT
-        m.match_id,
-        l.name AS tournament,
-        COALESCE(NULLIF(m.radiant_name, ''), CONCAT('Radiant #', COALESCE(m.radiant_team_id::text, 'unknown'))) AS radiant_team,
-        COALESCE(NULLIF(m.dire_name, ''), CONCAT('Dire #', COALESCE(m.dire_team_id::text, 'unknown'))) AS dire_team,
-        COALESCE(m.radiant_score, 0) AS kill_team_1,
-        COALESCE(m.dire_score, 0) AS kill_team_2,
-        CASE
-          WHEN COALESCE(m.series_id, 0) = 0 THEN 1
-          ELSE ROW_NUMBER() OVER (PARTITION BY m.series_id ORDER BY m.start_time ASC, m.match_id ASC)
-        END AS map_number,
-        COALESCE(NULLIF(m.series_id, 0), m.match_id) AS series_id,
-        CASE
-          WHEN m.radiant_win IS TRUE THEN COALESCE(NULLIF(m.radiant_name, ''), 'Radiant')
-          WHEN m.radiant_win IS FALSE THEN COALESCE(NULLIF(m.dire_name, ''), 'Dire')
-          ELSE 'Unknown'
-        END AS winner,
-        m.start_time,
-        mp.patch,
-        COUNT(*) OVER () AS total_rows
-      FROM matches m
-      JOIN leagues l USING (leagueid)
-      JOIN match_patch mp USING (match_id)
-      WHERE TRUE
-        AND m.leagueid IN (${leagueIdsSql(filters.leagueIds)})
-        AND l.tier = ${tierSql(filters.tier)}
-        AND m.start_time >= extract(epoch from ${sqlDateTimestamp(MIN_EXPORT_DATE)})
-        AND m.start_time >= extract(epoch from ${sqlDateTimestamp(filters.startDate)})
-        AND m.start_time < extract(epoch from ${sqlDateTimestamp(endExclusive)})
-    )
+    ${filteredMatchesCte(filters, true)}
     SELECT
+      league_id,
       tournament,
       radiant_team,
       dire_team,
@@ -96,7 +124,20 @@ export function buildMatchesSql(filters, limit) {
       patch,
       total_rows
     FROM filtered_matches
-    ORDER BY start_time DESC, series_id DESC, map_number ASC
+    ORDER BY start_time DESC, tournament ASC, series_id DESC, map_number ASC
     LIMIT ${limit}
+  `;
+}
+
+export function buildPreviewLeaguesSql(filters) {
+  return `
+    ${filteredMatchesCte(filters)}
+    SELECT
+      league_id,
+      tournament,
+      COUNT(*)::int AS preview_match_count
+    FROM filtered_matches
+    GROUP BY league_id, tournament
+    ORDER BY preview_match_count DESC, tournament ASC
   `;
 }

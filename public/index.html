@@ -8,34 +8,38 @@
     <script type="module" src="/app.js" defer></script>
   </head>
   <body>
-    <div class="page-shell">
-      <header class="hero">
-        <div class="hero-copy">
+    <div class="dashboard-shell">
+      <header class="topbar">
+        <div class="topbar-copy">
           <p class="eyebrow">OpenDota Explorer SQL</p>
-          <h1>Dota 2 league exports built for analysis, not screenshots.</h1>
-          <p class="lede">
-            Search professional and premium leagues, preview league matches, and export CSV
-            files with tournament, teams, kills, map number, winner, date, and patch.
-          </p>
+          <h1>Dota 2 Match Export</h1>
+          <p class="topbar-text">Tier, date, leagues, preview, export.</p>
         </div>
-        <div class="hero-panel">
-          <p class="panel-label">Rules</p>
-          <ul class="rule-list">
-            <li>League selector is loaded from Explorer SQL, including leagues that started before 2023.</li>
-            <li>Match export dates are limited to 2023 and newer.</li>
-            <li>The app is tunnel-ready and listens on a configurable port.</li>
-          </ul>
+
+        <div class="metric-strip">
+          <article class="metric-card">
+            <span class="metric-label">Scope</span>
+            <strong id="filter-summary">Loading configuration…</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Preview limit</span>
+            <strong id="preview-cap">-</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Export limit</span>
+            <strong id="export-cap">-</strong>
+          </article>
         </div>
       </header>
 
-      <main class="layout">
-        <section class="filters card">
-          <div class="section-head">
+      <main class="workspace">
+        <aside class="panel filters-panel">
+          <div class="panel-header">
             <div>
               <p class="section-kicker">Filters</p>
-              <h2>Build an export</h2>
+              <h2>Query builder</h2>
             </div>
-            <span class="status-pill" id="connection-status">Loading configuration…</span>
+            <span class="status-pill" id="connection-status">Loading…</span>
           </div>
 
           <form id="filters-form" class="filters-form">
@@ -62,6 +66,22 @@
               </label>
             </fieldset>
 
+            <label class="toggle-card">
+              <input id="all-leagues-toggle" type="checkbox" />
+              <span class="toggle-copy">
+                <strong>Use all leagues in this tier</strong>
+                <small>
+                  Skip manual league selection and allow removals later from the preview sidebar.
+                </small>
+              </span>
+            </label>
+
+            <div class="selection-meta">
+              <span id="league-count">0 leagues available</span>
+              <span id="selection-count">0 selected</span>
+              <span id="excluded-count">0 excluded</span>
+            </div>
+
             <label class="field">
               <span>League search</span>
               <input
@@ -72,16 +92,29 @@
               />
             </label>
 
-            <div class="selection-meta">
-              <span id="league-count">0 leagues loaded</span>
-              <span id="selection-count">0 selected</span>
+            <div class="chip-section">
+              <div class="subhead">
+                <span>Selected leagues</span>
+                <button type="button" id="clear-selection" class="mini-action">Clear</button>
+              </div>
+              <div class="selected-leagues" id="selected-leagues">
+                <p class="hint">No leagues selected yet.</p>
+              </div>
             </div>
 
-            <div class="selected-leagues" id="selected-leagues">
-              <p class="hint">No leagues selected yet.</p>
+            <div class="chip-section">
+              <div class="subhead">
+                <span>Excluded leagues</span>
+                <button type="button" id="clear-exclusions" class="mini-action">Clear</button>
+              </div>
+              <div class="selected-leagues" id="excluded-leagues">
+                <p class="hint">No leagues excluded.</p>
+              </div>
             </div>
 
-            <div class="league-list" id="league-list" aria-live="polite"></div>
+            <div class="league-picker" id="league-picker">
+              <div class="league-list" id="league-list" aria-live="polite"></div>
+            </div>
 
             <div class="action-row">
               <button type="submit" id="preview-button" class="action action-primary">
@@ -92,15 +125,15 @@
               </button>
             </div>
           </form>
-        </section>
+        </aside>
 
-        <section class="results card">
-          <div class="section-head">
+        <section class="panel results-panel">
+          <div class="panel-header">
             <div>
               <p class="section-kicker">Preview</p>
               <h2>Matches</h2>
             </div>
-            <div class="results-meta" id="results-meta">No preview loaded.</div>
+            <div class="results-meta" id="results-meta">Run a preview to inspect matches.</div>
           </div>
 
           <div class="feedback" id="feedback"></div>
@@ -128,6 +161,24 @@
             </table>
           </div>
         </section>
+
+        <aside class="panel sidebar-panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Preview leagues</p>
+              <h2>Sidebar actions</h2>
+            </div>
+            <span class="status-pill small" id="preview-league-summary">0 leagues</span>
+          </div>
+
+          <p class="sidebar-copy">
+            After previewing matches, remove a league directly from the active filter here.
+          </p>
+
+          <div class="preview-league-list" id="preview-league-list">
+            <p class="hint">Run a preview to list leagues found in the current result set.</p>
+          </div>
+        </aside>
       </main>
     </div>
   </body>

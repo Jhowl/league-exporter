@@ -3,9 +3,10 @@
 Dockerized web app to export Dota 2 league matches into CSV for AI analysis. The UI lets you:
 
 - choose a tier: `professional` or `premium`
-- search and select one or more leagues
+- search and select one or more leagues, or use all leagues in the selected tier
 - pick a date range starting at `2023-01-01`
-- preview matches before exporting
+- preview matches in a dashboard before exporting
+- remove leagues from the current preview using the right sidebar
 - download a CSV with this header:
 
 ```js

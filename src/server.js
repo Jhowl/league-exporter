@@ -2,8 +2,8 @@ import express from "express";
 
 import { config } from "./lib/config.js";
 import { matchesToCsv } from "./lib/csv.js";
-import { getLeagues, getMatches } from "./lib/opendota.js";
-import { normalizeMatchFilters, validateTier } from "./lib/validation.js";
+import { getLeagues, getMatches, getPreview } from "./lib/opendota.js";
+import { normalizeLeagueFilters, normalizeMatchFilters } from "./lib/validation.js";
 
 const app = express();
 
@@ -20,12 +20,14 @@ app.get("/api/health", (_request, response) => {
 
 app.get("/api/leagues", async (request, response, next) => {
   try {
-    const tier = validateTier(request.query.tier || "professional");
+    const filters = normalizeLeagueFilters(request.query);
     const search = `${request.query.search ?? ""}`;
-    const leagues = await getLeagues(tier, search);
+    const leagues = await getLeagues(filters, search);
 
     response.json({
-      tier,
+      tier: filters.tier,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
       count: leagues.length,
       items: leagues,
     });
@@ -37,7 +39,7 @@ app.get("/api/leagues", async (request, response, next) => {
 app.post("/api/matches/preview", async (request, response, next) => {
   try {
     const filters = normalizeMatchFilters(request.body);
-    const result = await getMatches(filters, config.previewLimit);
+    const result = await getPreview(filters, config.previewLimit);
 
     response.json(result);
   } catch (error) {
@@ -70,7 +72,7 @@ app.use((error, _request, response, _next) => {
   const message = error instanceof Error ? error.message : "Unexpected server error.";
   const status = /OpenDota request failed/.test(message)
     ? 502
-    : /must be|cannot be|Select at least one league/.test(message)
+    : /must be|cannot be|Select at least one league|enable all leagues/.test(message)
       ? 400
       : 500;
 
