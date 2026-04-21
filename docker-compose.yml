@@ -1,8 +1,9 @@
 services:
   app:
     build: .
+    container_name: league-exporter
     ports:
-      - "3000:3000"
+      - "3003:3000"
     environment:
       HOST: 0.0.0.0
       PORT: 3000
@@ -10,3 +11,11 @@ services:
       QUERY_CACHE_TTL_MS: 300000
       PREVIEW_LIMIT: 200
       EXPORT_LIMIT: 10000
+    restart: unless-stopped
+    networks:
+      - tunnel-net
+
+networks:
+  tunnel-net:
+    external: true
+    name: ollama-ui_tunnel-net

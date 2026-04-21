@@ -55,7 +55,13 @@ http://localhost:3000
 Build and run:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
+```
+
+Default local URL:
+
+```text
+http://localhost:3003
 ```
 
 Or with plain Docker:
@@ -67,12 +73,18 @@ docker run --rm -p 3000:3000 league-exporter
 
 ## Tunnel
 
-The server listens on `0.0.0.0`, so you can point a tunnel at your local port.
+The server listens on `0.0.0.0`, so you can point a tunnel at it.
 
-Cloudflare Tunnel example:
+If you are using the existing Dockerized Cloudflare setup on this machine, attach this app to the same Docker network and point the Cloudflare hostname service to:
 
-```bash
-cloudflared tunnel --url http://localhost:3000
+```text
+http://league-exporter:3000
+```
+
+Local access remains:
+
+```text
+http://localhost:3003
 ```
 
 ngrok example:
